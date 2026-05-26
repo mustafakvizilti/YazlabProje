@@ -1,0 +1,12 @@
+data:
+  skab_dir: "data/"
+  batadal_path: "data/training_dataset_2.csv"
+
+params:
+  window_size: 4          
+  alphabet_size: 3        
+  max_epochs: 50          
+  batch_size: 32
+  early_stopping: 5       
+
+random_seeds: [42, 123, 2026, 7, 999]
