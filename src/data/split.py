@@ -12,8 +12,13 @@ def split_and_scale_batadal(df):
     val_df = df.iloc[train_end:val_end].copy()
     test_df = df.iloc[val_end:].copy()
 
-    features = [col for col in df.columns if col not in ['DATETIME', 'ATTACK']]
-    target = 'ATTACK'
+    possible_targets = ['ATTACK', 'ATT_FLAG', 'attack', 'label', 'Attack']
+    target = next((col for col in possible_targets if col in df.columns), None)
+    
+    if target is None:
+        raise ValueError(f"Hedef sutun bulunamadi! Mevcut sutunlar: {df.columns.tolist()}")
+
+    features = [col for col in df.columns if col not in ['DATETIME', 'datetime', target]]
 
     scaler = StandardScaler()
     train_df[features] = scaler.fit_transform(train_df[features])
