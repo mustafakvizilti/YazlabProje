@@ -4,12 +4,15 @@ import random
 import json
 import os
 from datetime import datetime
+from scipy.stats import wilcoxon
+from sklearn.decomposition import PCA
 from torch.utils.data import DataLoader
+
 from src.data.preprocess import load_config, load_batadal, load_and_concat_skab
 from src.data.split import split_and_scale_batadal, get_skab_splits
 from src.models.deep_learning import TimeSeriesDataset, LSTMModel, CNN1DModel, train_model
 from src.models.automata import ProbabilisticAutomata
-from src.utils.metrics import calculate_metrics
+from src.utils.metrics import calculate_metrics, add_gaussian_noise
 
 def set_seed(seed):
     """Her deneme için rastgelelikleri sabitler (Reproducibility)"""
@@ -19,16 +22,37 @@ def set_seed(seed):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
+def run_automata_parameter_analysis(train_ts):
+    """Automata için Window Size ve Alphabet Size duyarlılık analizi"""
+    window_sizes = [3, 4, 5, 6]
+    alphabet_sizes = [3, 4, 5, 6]
+    results = []
+    
+    for w in window_sizes:
+        for a in alphabet_sizes:
+            automata = ProbabilisticAutomata(window_size=w, alphabet_size=a)
+            automata.fit(train_ts)
+            state_count = len(automata.vocabulary)
+            total_possible_transitions = state_count * state_count
+            actual_transitions = sum(len(v) for v in automata.transitions.values())
+            density = actual_transitions / total_possible_transitions if total_possible_transitions > 0 else 0
+            
+            results.append({
+                "window_size": w,
+                "alphabet_size": a,
+                "state_count": state_count,
+                "transition_density": density
+            })
+    return results
+
 def main():
     config = load_config()
 
-    # Verileri Yükle
+    # 1. Verileri Yükle
     batadal_df = load_batadal(config['data']['batadal_path'])
-    
-    # Not: İleride SKAB için Cross-Dataset yapılacağı zaman bu kısmı kullanacağız.
-    # skab_df = load_and_concat_skab(config['data']['skab_dir']) 
+    skab_df = load_and_concat_skab(config['data']['skab_dir']) 
 
-    # Veriyi Böl ve Ölçeklendir (Sızıntı Kurallarına Uygun)
+    # 2. Veriyi Böl ve Ölçeklendir (Sızıntı Kurallarına Uygun)
     b_train, b_val, b_test, b_feats, b_target = split_and_scale_batadal(batadal_df)
 
     # Parametreler
@@ -39,23 +63,29 @@ def main():
     patience = config['params']['early_stopping']
     random_seeds = config.get('random_seeds', [42, 123, 2026, 7, 999])
 
+    # Gürültülü Test Verisi (Robustness Analizi)
+    b_test_noisy = b_test.copy()
+    b_test_noisy[b_feats] = add_gaussian_noise(b_test[b_feats].values)
+
     # PyTorch Dataset Oluşturma
     train_dataset = TimeSeriesDataset(b_train[b_feats].values, b_train[b_target].values, window_size)
     val_dataset = TimeSeriesDataset(b_val[b_feats].values, b_val[b_target].values, window_size)
     test_dataset = TimeSeriesDataset(b_test[b_feats].values, b_test[b_target].values, window_size)
+    test_noisy_dataset = TimeSeriesDataset(b_test_noisy[b_feats].values, b_test_noisy[b_target].values, window_size)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    test_noisy_loader = DataLoader(test_noisy_dataset, batch_size=batch_size, shuffle=False)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     input_size = len(b_feats)
 
     models_to_run = ["LSTM", "1D-CNN"]
-    results = {m: {'acc': [], 'prec': [], 'rec': [], 'f1': []} for m in models_to_run}
+    results = {m: {'acc': [], 'prec': [], 'rec': [], 'f1': [], 'noisy_f1': []} for m in models_to_run}
 
     print("\n" + "="*50)
-    print("DERIN OGRENME MODELLERI (LSTM & 1D-CNN) EGITIMI")
+    print("DERIN OGRENME MODELLERI: EGITIM VE GURULTU (ROBUSTNESS) TESTLERI")
     print("="*50)
 
     # 1. GÖREV: 5 Farklı Random Seed ve 2 Farklı Model Döngüsü
@@ -79,26 +109,37 @@ def main():
                 device=device
             )
             
-            # Test Seti Üzerinde Değerlendirme (Inference)
+            # Normal Test Seti Üzerinde Değerlendirme (Inference)
             trained_model.eval()
             all_preds, all_targets = [], []
             with torch.no_grad():
                 for X_batch, y_batch in test_loader:
-                    X_batch = X_batch.to(device)
-                    outputs = trained_model(X_batch)
+                    outputs = trained_model(X_batch.to(device))
                     preds = (outputs.cpu().numpy() > 0.5).astype(int)
                     all_preds.extend(preds)
                     all_targets.extend(y_batch.numpy())
             
-            # Metrikleri Hesapla
             acc, prec, rec, f1 = calculate_metrics(all_targets, all_preds)
-            print(f"[{model_name}] Test F1: {f1:.4f} | Acc: {acc:.4f} | Prec: {prec:.4f} | Rec: {rec:.4f}")
+            
+            # Gürültülü Test Seti Üzerinde Değerlendirme (Robustness)
+            noisy_preds, noisy_targets = [], []
+            with torch.no_grad():
+                for X_batch, y_batch in test_noisy_loader:
+                    outputs = trained_model(X_batch.to(device))
+                    preds = (outputs.cpu().numpy() > 0.5).astype(int)
+                    noisy_preds.extend(preds)
+                    noisy_targets.extend(y_batch.numpy())
+            
+            _, _, _, noisy_f1 = calculate_metrics(noisy_targets, noisy_preds)
+            
+            print(f"[{model_name}] Normal F1: {f1:.4f} | Gürültülü (Noisy) F1: {noisy_f1:.4f}")
             
             # Sonuçları Kaydet
             results[model_name]['acc'].append(acc)
             results[model_name]['prec'].append(prec)
             results[model_name]['rec'].append(rec)
             results[model_name]['f1'].append(f1)
+            results[model_name]['noisy_f1'].append(noisy_f1)
 
     print("\n" + "="*50)
     print("5 SEED ICIN ORTALAMA VE STANDART SAPMA SONUCLARI")
@@ -106,8 +147,60 @@ def main():
     for model_name in models_to_run:
         f1_mean = np.mean(results[model_name]['f1'])
         f1_std = np.std(results[model_name]['f1'])
-        print(f"{model_name:8s} -> Ortalama F1-Score: {f1_mean:.4f} ± {f1_std:.4f}")
+        noisy_f1_mean = np.mean(results[model_name]['noisy_f1'])
+        noisy_f1_std = np.std(results[model_name]['noisy_f1'])
+        print(f"{model_name:8s} -> Normal F1: {f1_mean:.4f} ± {f1_std:.4f} | Noisy F1: {noisy_f1_mean:.4f} ± {noisy_f1_std:.4f}")
+
+    # İstatistiksel Test (Wilcoxon)
+    print("\n" + "="*50)
+    print("ISTATISTIKSEL ANLAMLILIK ANALIZI (WILCOXON TESTI)")
     print("="*50)
+    try:
+        stat, p_val = wilcoxon(results['LSTM']['f1'], results['1D-CNN']['f1'])
+        print(f"LSTM vs 1D-CNN Wilcoxon Test P-Value: {p_val:.4f}")
+        if p_val < 0.05:
+            print("Sonuc: Iki model arasindaki performans farki ISTATISTIKSEL OLARAK ANLAMLIDIR.")
+        else:
+            print("Sonuc: Iki model arasindaki performans farki istatistiksel olarak anlamli DEGILDIR (Sansa bagli olabilir).")
+    except Exception as e:
+        print("Wilcoxon testi uygulanamadi. (Skorlar tamamen ayni olabilir).")
+
+    print("\n" + "="*50)
+    print("OLASILIKSAL OTOMATA: PARAMETRE VE CAPRAZ VERI SETI ANALIZI")
+    print("="*50)
+    
+    # Otomata Parametre Analizi
+    train_ts = b_train['PC1'].values
+    print("Otomata Parametre (Window Size ve Alphabet Size) Analizi Yapiliyor...")
+    param_analysis = run_automata_parameter_analysis(train_ts)
+    print(f"{len(param_analysis)} farkli kombinasyon test edildi ve JSON'a kaydedilecek.")
+
+    # Cross-Dataset Analizi (BATADAL'da egit, SKAB'da test et)
+    skab_features = [col for col in skab_df.columns if col not in ['datetime', 'anomaly', 'changepoint', 'source_group', 'source_file']]
+    pca = PCA(n_components=1)
+    skab_pc1 = pca.fit_transform(skab_df[skab_features].fillna(0)).flatten()
+    
+    # Model egitimi (BATADAL train uzerinde)
+    automata = ProbabilisticAutomata(window_size=window_size, alphabet_size=alphabet_size)
+    automata.fit(train_ts)
+    
+    # Test on BATADAL (Kendi Seti)
+    b_test_ts = b_test['PC1'].values
+    b_test_patterns = automata._extract_patterns(b_test_ts)
+    
+    # Test on SKAB (Capraz Veri Seti)
+    skab_patterns = automata._extract_patterns(skab_pc1)
+    
+    print("\nCapraz Veri Seti (Cross-Dataset) Ornek Aciklamalar:")
+    if len(b_test_patterns) > 2:
+        print(">> BATADAL Test Verisi (Original Dataset):")
+        path_explanation_b = automata.explain_path(b_test_patterns[0:3], time_step=3)
+        print(json.dumps(path_explanation_b, indent=4))
+        
+    if len(skab_patterns) > 2:
+        print("\n>> SKAB Test Verisi (Unseen Dataset - Cross Dataset):")
+        path_explanation_skab = automata.explain_path(skab_patterns[0:3], time_step=3)
+        print(json.dumps(path_explanation_skab, indent=4))
 
     # Sonuclari Kalici Olarak JSON Dosyasina Kaydetme
     os.makedirs("logs", exist_ok=True)
@@ -117,13 +210,16 @@ def main():
         "config_params": config['params'],
         "random_seeds": random_seeds,
         "results": results,
+        "automata_parameter_analysis": param_analysis,
         "summary": {}
     }
     
     for model_name in models_to_run:
         log_data["summary"][model_name] = {
             "f1_mean": float(np.mean(results[model_name]['f1'])),
-            "f1_std": float(np.std(results[model_name]['f1']))
+            "f1_std": float(np.std(results[model_name]['f1'])),
+            "noisy_f1_mean": float(np.mean(results[model_name]['noisy_f1'])),
+            "noisy_f1_std": float(np.std(results[model_name]['noisy_f1']))
         }
         
     log_file_path = f"logs/experiment_results_{timestamp}.json"
@@ -131,33 +227,6 @@ def main():
         json.dump(log_data, f, indent=4)
         
     print(f"\n[BILGI] Tüm deney parametreleri ve sonuclar basariyla kaydedildi: {log_file_path}")
-
-    # -----------------------------------------------------------
-    # OTOMATA KISMI (Geçici Olarak Eskisi Gibi Bırakıldı)
-    # -----------------------------------------------------------
-    print("\n--- OLASILIKSAL OTOMATA TESTI (Temel) ---")
-    automata = ProbabilisticAutomata(window_size=window_size, alphabet_size=alphabet_size)
-    
-    train_ts = b_train['PC1'].values
-    print("Otomata modeli egitiliyor...")
-    automata.fit(train_ts)
-    print("Otomata egitimi tamamlandi.")
-
-    test_ts = b_test['PC1'].values
-    test_patterns = automata._extract_patterns(test_ts)
-    
-    print("\nIlk test adimi icin tekil gecis aciklamasi (Single Transition):")
-    if len(test_patterns) > 1:
-        prev_state = test_patterns[0]
-        incoming_pattern = test_patterns[1]
-        explanation = automata.explain_step(prev_state, incoming_pattern, time_step=1)
-        print(json.dumps(explanation, indent=4))
-        
-    print("\nIlk 3 pattern icin ardisik yol olasiligi (Path Probability):")
-    if len(test_patterns) > 2:
-        sequence = test_patterns[0:3] # Ilk 3 pattern (2 adet gecis yapacak)
-        path_explanation = automata.explain_path(sequence, time_step=3)
-        print(json.dumps(path_explanation, indent=4))
 
 if __name__ == "__main__":
     main()

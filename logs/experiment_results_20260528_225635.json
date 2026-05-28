@@ -1,0 +1,205 @@
+{
+    "timestamp": "20260528_225635",
+    "config_params": {
+        "window_size": 4,
+        "alphabet_size": 3,
+        "max_epochs": 50,
+        "batch_size": 32,
+        "early_stopping": 5
+    },
+    "random_seeds": [
+        42,
+        123,
+        2026,
+        7,
+        999
+    ],
+    "results": {
+        "LSTM": {
+            "acc": [
+                0.6862980769230769,
+                0.6850961538461539,
+                0.6850961538461539,
+                0.6838942307692307,
+                0.6850961538461539
+            ],
+            "prec": [
+                1.0,
+                0.75,
+                1.0,
+                0.6666666666666666,
+                0.75
+            ],
+            "rec": [
+                0.011363636363636364,
+                0.011363636363636364,
+                0.007575757575757576,
+                0.007575757575757576,
+                0.011363636363636364
+            ],
+            "f1": [
+                0.02247191011235955,
+                0.022388059701492536,
+                0.015037593984962405,
+                0.0149812734082397,
+                0.022388059701492536
+            ],
+            "noisy_f1": [
+                0.02247191011235955,
+                0.022388059701492536,
+                0.015037593984962405,
+                0.0149812734082397,
+                0.02247191011235955
+            ]
+        },
+        "1D-CNN": {
+            "acc": [
+                0.6850961538461539,
+                0.6838942307692307,
+                0.6838942307692307,
+                0.6838942307692307,
+                0.6850961538461539
+            ],
+            "prec": [
+                1.0,
+                1.0,
+                1.0,
+                1.0,
+                1.0
+            ],
+            "rec": [
+                0.007575757575757576,
+                0.003787878787878788,
+                0.003787878787878788,
+                0.003787878787878788,
+                0.007575757575757576
+            ],
+            "f1": [
+                0.015037593984962405,
+                0.007547169811320755,
+                0.007547169811320755,
+                0.007547169811320755,
+                0.015037593984962405
+            ],
+            "noisy_f1": [
+                0.015037593984962405,
+                0.007547169811320755,
+                0.007547169811320755,
+                0.007547169811320755,
+                0.007547169811320755
+            ]
+        }
+    },
+    "automata_parameter_analysis": [
+        {
+            "window_size": 3,
+            "alphabet_size": 3,
+            "state_count": 26,
+            "transition_density": 0.10502958579881656
+        },
+        {
+            "window_size": 3,
+            "alphabet_size": 4,
+            "state_count": 56,
+            "transition_density": 0.05389030612244898
+        },
+        {
+            "window_size": 3,
+            "alphabet_size": 5,
+            "state_count": 105,
+            "transition_density": 0.030294784580498866
+        },
+        {
+            "window_size": 3,
+            "alphabet_size": 6,
+            "state_count": 166,
+            "transition_density": 0.01894324285092176
+        },
+        {
+            "window_size": 4,
+            "alphabet_size": 3,
+            "state_count": 71,
+            "transition_density": 0.03273160087284269
+        },
+        {
+            "window_size": 4,
+            "alphabet_size": 4,
+            "state_count": 169,
+            "transition_density": 0.013900073526837295
+        },
+        {
+            "window_size": 4,
+            "alphabet_size": 5,
+            "state_count": 334,
+            "transition_density": 0.006839614184804044
+        },
+        {
+            "window_size": 4,
+            "alphabet_size": 6,
+            "state_count": 522,
+            "transition_density": 0.003934175951615508
+        },
+        {
+            "window_size": 5,
+            "alphabet_size": 3,
+            "state_count": 165,
+            "transition_density": 0.011460055096418733
+        },
+        {
+            "window_size": 5,
+            "alphabet_size": 4,
+            "state_count": 397,
+            "transition_density": 0.004764956315946424
+        },
+        {
+            "window_size": 5,
+            "alphabet_size": 5,
+            "state_count": 763,
+            "transition_density": 0.002176343982589248
+        },
+        {
+            "window_size": 5,
+            "alphabet_size": 6,
+            "state_count": 1072,
+            "transition_density": 0.0013957730006683004
+        },
+        {
+            "window_size": 6,
+            "alphabet_size": 3,
+            "state_count": 312,
+            "transition_density": 0.005208333333333333
+        },
+        {
+            "window_size": 6,
+            "alphabet_size": 4,
+            "state_count": 751,
+            "transition_density": 0.0020265921514323556
+        },
+        {
+            "window_size": 6,
+            "alphabet_size": 5,
+            "state_count": 1267,
+            "transition_density": 0.0010652287532026943
+        },
+        {
+            "window_size": 6,
+            "alphabet_size": 6,
+            "state_count": 1604,
+            "transition_density": 0.0007808564623354332
+        }
+    ],
+    "summary": {
+        "LSTM": {
+            "f1_mean": 0.019453379381709344,
+            "f1_std": 0.0036286393438475424,
+            "noisy_f1_mean": 0.019470149463882747,
+            "noisy_f1_std": 0.0036423314086685738
+        },
+        "1D-CNN": {
+            "f1_mean": 0.010543339480777413,
+            "f1_std": 0.003669543436486077,
+            "noisy_f1_mean": 0.009045254646049083,
+            "noisy_f1_std": 0.00299616966945666
+        }
+    }
+}
