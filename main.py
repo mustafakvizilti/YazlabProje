@@ -2,6 +2,8 @@ import torch
 import numpy as np
 import random
 import json
+import os
+from datetime import datetime
 from torch.utils.data import DataLoader
 from src.data.preprocess import load_config, load_batadal, load_and_concat_skab
 from src.data.split import split_and_scale_batadal, get_skab_splits
@@ -104,8 +106,31 @@ def main():
     for model_name in models_to_run:
         f1_mean = np.mean(results[model_name]['f1'])
         f1_std = np.std(results[model_name]['f1'])
-        print(f"{model_name:8s} -> Ortalama F1-Score: {f1_mean:.4f} \u00b1 {f1_std:.4f}")
+        print(f"{model_name:8s} -> Ortalama F1-Score: {f1_mean:.4f} ± {f1_std:.4f}")
     print("="*50)
+
+    # Sonuclari Kalici Olarak JSON Dosyasina Kaydetme
+    os.makedirs("logs", exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_data = {
+        "timestamp": timestamp,
+        "config_params": config['params'],
+        "random_seeds": random_seeds,
+        "results": results,
+        "summary": {}
+    }
+    
+    for model_name in models_to_run:
+        log_data["summary"][model_name] = {
+            "f1_mean": float(np.mean(results[model_name]['f1'])),
+            "f1_std": float(np.std(results[model_name]['f1']))
+        }
+        
+    log_file_path = f"logs/experiment_results_{timestamp}.json"
+    with open(log_file_path, "w", encoding="utf-8") as f:
+        json.dump(log_data, f, indent=4)
+        
+    print(f"\n[BILGI] Tüm deney parametreleri ve sonuclar basariyla kaydedildi: {log_file_path}")
 
     # -----------------------------------------------------------
     # OTOMATA KISMI (Geçici Olarak Eskisi Gibi Bırakıldı)
