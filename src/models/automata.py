@@ -120,19 +120,15 @@ class ProbabilisticAutomata:
         return best_match
 
     def explain_step(self, prev_state, incoming_pattern, time_step):
-        """Olasılıksal Açıklanabilirlik Modülü Çıktısı (JSON Formatı)"""
+        """Olasılıksal Açıklanabilirlik Modülü Çıktısı (JSON Formatı) - Tekil Geçiş"""
         status = "seen"
         mapped_to = incoming_pattern
         
-        # Unseen Pattern Yönetimi
         if incoming_pattern not in self.vocabulary:
             status = "unseen"
             mapped_to = self._get_nearest_pattern(incoming_pattern)
             
-        # Geçiş Olasılığı (Confidence Score / Path Probability)
         prob = self.transitions.get(prev_state, {}).get(mapped_to, 0.0)
-        
-        # Anomali Kararı (Eşik Değeri Örneği: %5)
         decision = "anomaly" if prob < 0.05 else "normal"
         
         explanation = {
@@ -145,3 +141,33 @@ class ProbabilisticAutomata:
             "decision": decision
         }
         return explanation
+
+    def explain_path(self, sequence_of_patterns, time_step):
+        """PDF'teki gibi ardışık geçişlerin olasılıklarını çarparak Path Probability hesaplar"""
+        transitions_detail = []
+        path_prob = 1.0
+        
+        mapped_sequence = []
+        for p in sequence_of_patterns:
+            if p not in self.vocabulary:
+                mapped_sequence.append(self._get_nearest_pattern(p))
+            else:
+                mapped_sequence.append(p)
+                
+        for i in range(len(mapped_sequence) - 1):
+            s1 = mapped_sequence[i]
+            s2 = mapped_sequence[i+1]
+            prob = self.transitions.get(s1, {}).get(s2, 0.0)
+            transitions_detail.append(f"{s1} -> {s2} : {prob:.4f}")
+            path_prob *= prob
+            
+        decision = "anomaly" if path_prob < 0.05 else "normal"
+        
+        return {
+            "time_step": time_step,
+            "original_sequence": sequence_of_patterns,
+            "mapped_sequence": mapped_sequence,
+            "transitions": transitions_detail,
+            "path_probability": path_prob,
+            "decision": decision
+        }

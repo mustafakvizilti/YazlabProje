@@ -146,12 +146,18 @@ def main():
     test_ts = b_test['PC1'].values
     test_patterns = automata._extract_patterns(test_ts)
     
-    print("\nIlk test adimi icin aciklama ciktisi:")
+    print("\nIlk test adimi icin tekil gecis aciklamasi (Single Transition):")
     if len(test_patterns) > 1:
         prev_state = test_patterns[0]
         incoming_pattern = test_patterns[1]
         explanation = automata.explain_step(prev_state, incoming_pattern, time_step=1)
         print(json.dumps(explanation, indent=4))
+        
+    print("\nIlk 3 pattern icin ardisik yol olasiligi (Path Probability):")
+    if len(test_patterns) > 2:
+        sequence = test_patterns[0:3] # Ilk 3 pattern (2 adet gecis yapacak)
+        path_explanation = automata.explain_path(sequence, time_step=3)
+        print(json.dumps(path_explanation, indent=4))
 
 if __name__ == "__main__":
     main()
