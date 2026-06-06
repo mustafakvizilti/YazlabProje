@@ -59,9 +59,18 @@ def main():
     window_size = config['params']['window_size']
     alphabet_size = config['params']['alphabet_size']
     batch_size = config['params']['batch_size']
-    max_epochs = config['params']['max_epochs']
     patience = config['params']['early_stopping']
-    random_seeds = config.get('random_seeds', [42, 123, 2026, 7, 999])
+    
+    # --- FAST MODU KONTROLU (run_experiments.py uzerinden gelir) ---
+    is_fast_mode = os.environ.get("YAZLAB_FAST_MODE", "0") == "1"
+    if is_fast_mode:
+        random_seeds = [42] # Sadece 1 tane hizli test
+        max_epochs = 3      # Egitimi cok kisa tut
+        print("[SISTEM] Fast mod devrede: Sadece 1 Seed ve 3 Epoch kullanilacak.")
+    else:
+        random_seeds = config.get('random_seeds', [42, 123, 2026, 7, 999])
+        max_epochs = config['params']['max_epochs']
+    # ---------------------------------------------------------------
 
     # Gürültülü Test Verisi (Robustness Analizi)
     b_test_noisy = b_test.copy()
