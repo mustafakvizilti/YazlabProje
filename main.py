@@ -97,7 +97,7 @@ def main():
     print("DERIN OGRENME MODELLERI: EGITIM VE GURULTU (ROBUSTNESS) TESTLERI")
     print("="*50)
 
-    # 1. GÖREV: 5 Farklı Random Seed ve 2 Farklı Model Döngüsü
+     Random Seed ve 2 Farklı Model Döngüsü
     for seed in random_seeds:
         set_seed(seed)
         print(f"\n>>> SEED: {seed} <<<")
@@ -184,7 +184,7 @@ def main():
     param_analysis = run_automata_parameter_analysis(train_ts)
     print(f"{len(param_analysis)} farkli kombinasyon test edildi ve JSON'a kaydedilecek.")
 
-    # Cross-Dataset Analizi (BATADAL'da egit, SKAB'da test et)
+    # Cross-Dataset Analizi 
     skab_features = [col for col in skab_df.columns if col not in ['datetime', 'anomaly', 'changepoint', 'source_group', 'source_file']]
     pca = PCA(n_components=1)
     skab_pc1 = pca.fit_transform(skab_df[skab_features].fillna(0)).flatten()
@@ -193,11 +193,11 @@ def main():
     automata = ProbabilisticAutomata(window_size=window_size, alphabet_size=alphabet_size)
     automata.fit(train_ts)
     
-    # Test on BATADAL (Kendi Seti)
+    # Test on BATADAL 
     b_test_ts = b_test['PC1'].values
     b_test_patterns = automata._extract_patterns(b_test_ts)
     
-    # Test on SKAB (Capraz Veri Seti)
+    # Test on SKAB 
     skab_patterns = automata._extract_patterns(skab_pc1)
     
     print("\nCapraz Veri Seti (Cross-Dataset) Ornek Aciklamalar:")
