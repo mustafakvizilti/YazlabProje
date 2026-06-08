@@ -2,12 +2,12 @@
 
 Bu proje, BATADAL ve SKAB gibi karmaşık zaman serisi verilerinde anomali tespiti yapmak amacıyla geliştirilmiş; Derin Öğrenme (LSTM ve 1D-CNN) ile Olasılıksal Otomata yaklaşımlarını harmanlayan kapsamlı bir yapay zeka analiz platformudur.
 
-## 📌 Proje Özeti
+##  Proje Özeti
 Projenin temel amacı, iki farklı makine öğrenimi paradigmasını (Yapay Sinir Ağları ve Olasılıksal Modeller) aynı veri seti üzerinde eğiterek performanslarını, gürültüye karşı dayanıklılıklarını ve farklı veri setlerine olan genellenebilirliklerini (Cross-Dataset) analiz etmektir.
 
 ---
 
-## 🏗️ Kullanılan Yöntemler ve Mimari
+##  Kullanılan Yöntemler ve Mimari
 
 ### 1. Derin Öğrenme Modelleri (LSTM ve 1D-CNN)
 - **LSTM (Uzun Kısa Vadeli Bellek):** Zaman serisindeki uzun vadeli bağımlılıkları yakalayarak geçmiş sensör verilerinden geleceği tahmin eder. 
@@ -22,7 +22,7 @@ Karakutu (Black-box) derin öğrenme modellerinin aksine, anomali kararlarını 
 
 ---
 
-## 🧪 Deneysel Analizler ve Testler
+##  Deneysel Analizler ve Testler
 
 ### A. Gürültü ve Dayanıklılık (Robustness) Testi
 Test verisine standart sapması 0.1 olan yapay **Gaussian Noise** (gürültü) eklenerek test verisi "kirletilmiş" ve her iki derin öğrenme modelinin bu zorlu şartlar altındaki F1 skorlarındaki değişim incelenmiştir.
@@ -35,17 +35,18 @@ Automata modelinin veriyi ezberlemesini önlemek için, model ilk olarak BATADAL
 
 ---
 
-## 📊 Raporlama ve Görseller
+##  Raporlama ve Görseller
 
 Projede üretilen **Karmaşıklık Matrisleri (Confusion Matrix)**, **ROC Eğrileri** ve **Otomata Isı Haritasını (Heatmap)** çizdirmek ve resim olarak kaydetmek için aşağıdaki kod dosyasını çalıştırmanız yeterlidir:
-
-```bash
-python plot_results.py
-```
+<img width="1000" height="800" alt="automata_heatmap" src="https://github.com/user-attachments/assets/bf9829de-54a4-44fa-86b3-d504b8b0080c" />
+<img width="600" height="500" alt="roc_1d-cnn" src="https://github.com/user-attachments/assets/42e55d1a-d9f2-4658-91d9-d85f36085774" />
+<img width="600" height="500" alt="roc_lstm" src="https://github.com/user-attachments/assets/e13d0919-5f4f-4cd2-8577-e1b2f6d53e3b" />
+<img width="600" height="500" alt="cm_1d-cnn" src="https://github.com/user-attachments/assets/de6d07cf-20d6-4f93-a32b-e589fb6e6490" />
+<img width="600" height="500" alt="cm_lstm" src="https://github.com/user-attachments/assets/e5eee01b-896b-4d15-864c-a6c00a00b864" />
 
 Tüm bu görseller proje dizini içindeki `figures/` klasörüne, kod her çalıştığında yapılan deneylerin skorları ve logları ise `logs/` klasöründeki JSON dosyalarına kaydedilmektedir.
 
-## 🚀 Sistemi Çalıştırma
+##  Sistemi Çalıştırma
 
 Tüm eğitim (Deep Learning + Automata) ve test senaryolarını sıfırdan başlatıp detaylı skorları görmek için:
 ```bash
